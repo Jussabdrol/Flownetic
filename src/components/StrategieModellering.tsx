@@ -1,12 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Target, TrendingUp, BarChart3, AlertCircle } from 'lucide-react'
+import { Plus, Target, TrendingUp, BarChart3, AlertCircle, X, Trash2 } from 'lucide-react'
+
+interface Service {
+  id: string
+  name: string
+  description: string
+  ctqFactors: string[]
+  status: string
+}
+
+interface KPI {
+  name: string
+  target: string
+  ctqFactor: string
+}
 
 export default function StrategieModellering() {
   const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
-  const services = [
+  const [services, setServices] = useState<Service[]>([
     {
       id: 'klantonboarding',
       name: 'Klantonboarding',
@@ -21,7 +36,21 @@ export default function StrategieModellering() {
       ctqFactors: ['Doorlooptijd', 'Foutpercentage', 'Compliance'],
       status: 'In Ontwikkeling'
     }
-  ]
+  ])
+
+  const handleNewService = (newService: Omit<Service, 'id'>, newKpis: KPI[]) => {
+    const serviceId = newService.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+    const serviceWithId = {
+      ...newService,
+      id: serviceId
+    }
+    
+    setServices([...services, serviceWithId])
+    
+    // Note: In een echte applicatie zou je hier ook de KPI's opslaan
+    // Voor nu voegen we ze toe aan de bestaande kpis array
+    console.log('Nieuwe KPIs:', newKpis)
+  }
 
   const kpis = [
     {
@@ -59,7 +88,7 @@ export default function StrategieModellering() {
             Koppel Critical-to-Quality factoren aan KPI's
           </p>
         </div>
-        <button className="btn-primary">
+        <button className="btn-primary" onClick={() => setShowModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nieuwe Dienst
         </button>
@@ -206,6 +235,307 @@ export default function StrategieModellering() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Modal voor Nieuwe Dienst */}
+      {showModal && <NewServiceModal onClose={() => setShowModal(false)} onSubmit={handleNewService} />}
+    </div>
+  )
+}
+
+// Modal Component voor Nieuwe Dienst
+interface NewServiceModalProps {
+  onClose: () => void
+  onSubmit: (service: Omit<Service, 'id'>, kpis: KPI[]) => void
+}
+
+function NewServiceModal({ onClose, onSubmit }: NewServiceModalProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'Actief'
+  })
+  const [ctqFactors, setCtqFactors] = useState<string[]>([''])
+  const [kpis, setKpis] = useState<KPI[]>([{ name: '', target: '', ctqFactor: '' }])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validatie
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert('Naam en beschrijving zijn verplicht')
+      return
+    }
+
+    const validCtqFactors = ctqFactors.filter(factor => factor.trim() !== '')
+    const validKpis = kpis.filter(kpi => kpi.name.trim() !== '' && kpi.target.trim() !== '' && kpi.ctqFactor.trim() !== '')
+
+    if (validCtqFactors.length === 0) {
+      alert('Minimaal één CTQ factor is verplicht')
+      return
+    }
+
+    onSubmit(
+      {
+        name: formData.name,
+        description: formData.description,
+        ctqFactors: validCtqFactors,
+        status: formData.status
+      },
+      validKpis
+    )
+    onClose()
+  }
+
+  const addCtqFactor = () => {
+    setCtqFactors([...ctqFactors, ''])
+  }
+
+  const removeCtqFactor = (index: number) => {
+    if (ctqFactors.length > 1) {
+      setCtqFactors(ctqFactors.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateCtqFactor = (index: number, value: string) => {
+    const updated = [...ctqFactors]
+    updated[index] = value
+    setCtqFactors(updated)
+  }
+
+  const addKpi = () => {
+    setKpis([...kpis, { name: '', target: '', ctqFactor: '' }])
+  }
+
+  const removeKpi = (index: number) => {
+    if (kpis.length > 1) {
+      setKpis(kpis.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateKpi = (index: number, field: keyof KPI, value: string) => {
+    const updated = [...kpis]
+    updated[index] = { ...updated[index], [field]: value }
+    setKpis(updated)
+  }
+
+  const platformRoutes = [
+    { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Proces Modeling', path: '/proces-modeling' },
+    { name: 'Case Management', path: '/case-management' }
+  ]
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-secondary-200">
+          <h2 className="text-xl font-semibold text-secondary-900">Nieuwe Dienst Toevoegen</h2>
+          <button
+            onClick={onClose}
+            className="text-secondary-400 hover:text-secondary-600 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-6">
+            {/* Basis Informatie */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Dienst Naam *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Bijv. Klantondersteuning"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="Actief">Actief</option>
+                  <option value="In Ontwikkeling">In Ontwikkeling</option>
+                  <option value="Inactief">Inactief</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                Beschrijving *
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                rows={3}
+                placeholder="Beschrijf de dienst en haar doelstellingen"
+                required
+              />
+            </div>
+
+            {/* CTQ Factoren */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-secondary-700">
+                  Critical-to-Quality (CTQ) Factoren *
+                </label>
+                <button
+                  type="button"
+                  onClick={addCtqFactor}
+                  className="btn-secondary"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  CTQ Toevoegen
+                </button>
+              </div>
+              <div className="space-y-2">
+                {ctqFactors.map((factor, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={factor}
+                      onChange={(e) => updateCtqFactor(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Bijv. Snelheid, Accuraatheid, Kwaliteit"
+                    />
+                    {ctqFactors.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCtqFactor(index)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* KPI's */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-secondary-700">
+                  Key Performance Indicators (KPI's)
+                </label>
+                <button
+                  type="button"
+                  onClick={addKpi}
+                  className="btn-secondary"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  KPI Toevoegen
+                </button>
+              </div>
+              <div className="space-y-3">
+                {kpis.map((kpi, index) => (
+                  <div key={index} className="border border-secondary-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-secondary-600 mb-1">
+                          KPI Naam
+                        </label>
+                        <input
+                          type="text"
+                          value={kpi.name}
+                          onChange={(e) => updateKpi(index, 'name', e.target.value)}
+                          className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Bijv. Response tijd"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-secondary-600 mb-1">
+                          Doel Waarde
+                        </label>
+                        <input
+                          type="text"
+                          value={kpi.target}
+                          onChange={(e) => updateKpi(index, 'target', e.target.value)}
+                          className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Bijv. < 2 uren"
+                        />
+                      </div>
+                      <div className="flex items-end space-x-2">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-secondary-600 mb-1">
+                            Gekoppelde CTQ
+                          </label>
+                          <select
+                            value={kpi.ctqFactor}
+                            onChange={(e) => updateKpi(index, 'ctqFactor', e.target.value)}
+                            className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          >
+                            <option value="">Selecteer CTQ</option>
+                            {ctqFactors.filter(factor => factor.trim() !== '').map((factor, factorIndex) => (
+                              <option key={factorIndex} value={factor}>{factor}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {kpis.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeKpi(index)}
+                            className="text-red-500 hover:text-red-700 p-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Navigatie Links */}
+          <div className="mt-8 pt-6 border-t border-secondary-200">
+            <h3 className="text-sm font-medium text-secondary-700 mb-3">Gerelateerde Modules</h3>
+            <div className="flex flex-wrap gap-2">
+              {platformRoutes.map((route) => (
+                <a
+                  key={route.name}
+                  href={route.path}
+                  className="inline-flex items-center px-3 py-1 text-sm bg-secondary-100 text-secondary-700 rounded-lg hover:bg-secondary-200 transition-colors"
+                >
+                  {route.name}
+                  <TrendingUp className="h-3 w-3 ml-1" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-secondary-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+            >
+              Dienst Toevoegen
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
