@@ -1,51 +1,89 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Target, TrendingUp, BarChart3, AlertCircle } from 'lucide-react'
+import { Plus, Target, TrendingUp, BarChart3, AlertCircle, Trash2, Edit } from 'lucide-react'
+import ServiceModal, { Service, KPI } from './ServiceModal'
 
 export default function StrategieModellering() {
   const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingService, setEditingService] = useState<Service | null>(null)
 
-  const services = [
+  const [services, setServices] = useState<Service[]>([
     {
       id: 'klantonboarding',
       name: 'Klantonboarding',
       description: 'Complete onboarding van nieuwe klanten',
       ctqFactors: ['Snelheid', 'Accuraatheid', 'Klanttevredenheid'],
-      status: 'Actief'
+      status: 'Actief',
+      kpis: [
+        {
+          id: 'kpi-1',
+          name: 'Gemiddelde Onboarding Tijd',
+          current: '2.3 dagen',
+          target: '2.0 dagen',
+          trend: 'stable',
+          ctqFactor: 'Snelheid'
+        },
+        {
+          id: 'kpi-2',
+          name: 'Klanttevredenheid Score',
+          current: '8.7/10',
+          target: '9.0/10',
+          trend: 'up',
+          ctqFactor: 'Klanttevredenheid'
+        },
+        {
+          id: 'kpi-3',
+          name: 'Data Accuraatheid',
+          current: '96%',
+          target: '98%',
+          trend: 'down',
+          ctqFactor: 'Accuraatheid'
+        }
+      ]
     },
     {
       id: 'factuurverwerking',
       name: 'Factuurverwerking',
       description: 'Geautomatiseerde factuurverwerking',
       ctqFactors: ['Doorlooptijd', 'Foutpercentage', 'Compliance'],
-      status: 'In Ontwikkeling'
+      status: 'In Ontwikkeling',
+      kpis: []
     }
-  ]
+  ])
 
-  const kpis = [
-    {
-      name: 'Gemiddelde Onboarding Tijd',
-      current: '2.3 dagen',
-      target: '2.0 dagen',
-      trend: 'stable',
-      ctqFactor: 'Snelheid'
-    },
-    {
-      name: 'Klanttevredenheid Score',
-      current: '8.7/10',
-      target: '9.0/10',
-      trend: 'up',
-      ctqFactor: 'Klanttevredenheid'
-    },
-    {
-      name: 'Data Accuraatheid',
-      current: '96%',
-      target: '98%',
-      trend: 'down',
-      ctqFactor: 'Accuraatheid'
+  const selectedServiceData = services.find(s => s.id === selectedService)
+  const currentKPIs = selectedServiceData?.kpis || []
+
+  const handleSaveService = (service: Service) => {
+    if (editingService) {
+      // Update existing service
+      setServices(services.map(s => s.id === service.id ? service : s))
+    } else {
+      // Add new service
+      setServices([...services, service])
     }
-  ]
+  }
+
+  const handleEditService = (service: Service) => {
+    setEditingService(service)
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteService = (serviceId: string) => {
+    if (window.confirm('Weet je zeker dat je deze dienst wilt verwijderen?')) {
+      setServices(services.filter(s => s.id !== serviceId))
+      if (selectedService === serviceId) {
+        setSelectedService(null)
+      }
+    }
+  }
+
+  const openNewServiceModal = () => {
+    setEditingService(null)
+    setIsModalOpen(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +97,7 @@ export default function StrategieModellering() {
             Koppel Critical-to-Quality factoren aan KPI's
           </p>
         </div>
-        <button className="btn-primary">
+        <button onClick={openNewServiceModal} className="btn-primary">
           <Plus className="h-4 w-4 mr-2" />
           Nieuwe Dienst
         </button>
@@ -100,13 +138,39 @@ export default function StrategieModellering() {
                         ))}
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      service.status === 'Actief'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {service.status}
-                    </span>
+                    <div className="flex flex-col items-end space-y-2">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        service.status === 'Actief'
+                          ? 'bg-green-100 text-green-700'
+                          : service.status === 'In Ontwikkeling'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {service.status}
+                      </span>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditService(service)
+                          }}
+                          className="p-1 text-secondary-500 hover:text-primary-600 transition-colors"
+                          title="Dienst bewerken"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteService(service.id)
+                          }}
+                          className="p-1 text-secondary-500 hover:text-red-600 transition-colors"
+                          title="Dienst verwijderen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -121,7 +185,7 @@ export default function StrategieModellering() {
               {/* CTQ Diagram */}
               <div className="card">
                 <h4 className="font-semibold text-secondary-900 mb-4">
-                  CTQ Flowdown - {services.find(s => s.id === selectedService)?.name}
+                  CTQ Flowdown - {selectedServiceData?.name}
                 </h4>
                 <div className="bg-secondary-50 rounded-lg p-6">
                   <div className="flex items-center justify-center space-x-8">
@@ -161,8 +225,8 @@ export default function StrategieModellering() {
                   </button>
                 </div>
                 <div className="space-y-4">
-                  {kpis.map((kpi, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+                  {currentKPIs.map((kpi, index) => (
+                    <div key={kpi.id} className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <h5 className="font-medium text-secondary-900">{kpi.name}</h5>
@@ -192,6 +256,11 @@ export default function StrategieModellering() {
                       </div>
                     </div>
                   ))}
+                  {currentKPIs.length === 0 && (
+                    <p className="text-secondary-500 text-center py-4">
+                      Geen KPI's gedefinieerd voor deze dienst.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -207,6 +276,14 @@ export default function StrategieModellering() {
           )}
         </div>
       </div>
+
+      {/* Service Modal */}
+      <ServiceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveService}
+        service={editingService}
+      />
     </div>
   )
 }
