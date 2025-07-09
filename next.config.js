@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: {}
-  }
+  // Removed turbo experimental config to fix Vercel deployment
 }
 
 module.exports = nextConfig
