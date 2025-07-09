@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: {}
-  }
+  output: 'standalone',
+  trailingSlash: false,
+  poweredByHeader: false,
+  compress: true
 }
 
 module.exports = nextConfig
